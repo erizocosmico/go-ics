@@ -1,7 +1,6 @@
 package ics
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"regexp"
@@ -73,13 +72,13 @@ func getICal(url string) (string, error) {
 	)
 
 	if isRemote {
-		content, err = downloadFromUrl(url)
+		content, err = downloadFromURL(url)
 		if err != nil {
 			return "", err
 		}
 	} else {
 		if !fileExists(url) {
-			return "", errors.New(fmt.Sprintf("File %s does not exists", url))
+			return "", fmt.Errorf("File %s does not exists", url)
 		}
 
 		contentBytes, err := ioutil.ReadFile(url)
@@ -144,7 +143,7 @@ func parseEvents(cal *Calendar, eventsData []string, maxRepeats int) {
 		event.Status = parseEventStatus(eventData)
 		event.Summary = parseEventSummary(eventData)
 		event.Description = parseEventDescription(eventData)
-		event.ID = parseEventId(eventData)
+		event.ID = parseEventID(eventData)
 		event.Class = parseEventClass(eventData)
 		event.Sequence = parseEventSequence(eventData)
 		event.Created = parseEventCreated(eventData)
@@ -238,7 +237,7 @@ func parseEventDescription(eventData string) string {
 	return trimField(eventDescRegex.FindString(eventData), "DESCRIPTION:")
 }
 
-func parseEventId(eventData string) string {
+func parseEventID(eventData string) string {
 	return trimField(eventUIDRegex.FindString(eventData), "UID:")
 }
 

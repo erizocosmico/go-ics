@@ -2,6 +2,7 @@ package ics
 
 import "time"
 
+// Calendar represents a single calendar with events
 type Calendar struct {
 	Name        string
 	Description string

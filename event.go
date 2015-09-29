@@ -2,6 +2,7 @@ package ics
 
 import "time"
 
+// Event represents an event in the calendar
 type Event struct {
 	Start         time.Time
 	End           time.Time

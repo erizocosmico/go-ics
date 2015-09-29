@@ -14,7 +14,7 @@ const (
 	icsFormatWholeDay = "20060102"
 )
 
-func downloadFromUrl(url string) (string, error) {
+func downloadFromURL(url string) (string, error) {
 	response, err := http.Get(url)
 	if err != nil {
 		return "", err
