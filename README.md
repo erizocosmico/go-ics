@@ -1,4 +1,4 @@
-# go-ics [![GoDoc](https://godoc.org/github.com/mvader/go-ics?status.svg)](http://godoc.org/github.com/mvader/go-ics)
+# go-ics [![GoDoc](https://godoc.org/github.com/mvader/go-ics?status.svg)](http://godoc.org/github.com/mvader/go-ics) [![Build Status](https://travis-ci.org/mvader/go-ics.svg?branch=master)](https://travis-ci.org/mvader/go-ics)
 This library provides a way of parsing ics calendar files. Supports repetition patterns, organizer and attendees. It also supports both local and remote files to be parsed.
 
 ### Status
