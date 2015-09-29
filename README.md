@@ -6,6 +6,7 @@ This is a work in progress. It needs a lot more tests and a small refactor on so
 
 ##Install
 `go get https://github.com/mvader/go-ics`
+
 ##How to use it
 ```go
 import "github.com/mvader/go-ics"
@@ -13,6 +14,14 @@ import "github.com/mvader/go-ics"
 // ...
 calendar, err := ics.ParseCalendar("local file URL or remote URL", 0)
 ```
+
+### TODO's
+
+* [ ] Explicitly handle all errors.
+* [ ] trimField should NOT be a regex compiled on runtime.
+* [ ] func names improvement
+* [ ] divide parseEvents in smaller, testable functions
+* [ ] test individual functions
 
 ## LICENCE
 The MIT License (MIT)
