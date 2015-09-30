@@ -6,7 +6,7 @@ import (
 )
 
 func TestCalendarInfo(t *testing.T) {
-	calendar, err := ParseCalendar("testCalendars/2eventsCal.ics", 0)
+	calendar, err := ParseCalendar("testCalendars/2eventsCal.ics", 0, nil)
 	if err != nil {
 		t.Errorf("Failed to parse the calendar ( %s ) \n", err.Error())
 	}
@@ -30,7 +30,7 @@ func TestCalendarInfo(t *testing.T) {
 }
 
 func TestCalendarEvents(t *testing.T) {
-	calendar, err := ParseCalendar("testCalendars/2eventsCal.ics", 1000)
+	calendar, err := ParseCalendar("testCalendars/2eventsCal.ics", 1000, nil)
 	if err != nil {
 		t.Errorf("Failed to parse the calendar ( %s ) \n", err.Error())
 	}

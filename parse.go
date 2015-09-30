@@ -2,6 +2,7 @@ package ics
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"regexp"
 	"strconv"
@@ -54,11 +55,18 @@ var (
 // ParseCalendar parses the calendar in the given url (can be a local path)
 // and returns the parsed calendar with its events. If maxRepeats is greater
 // than 0 new events will be added if an event has a repetition rule up to
-// maxRepeats.
-func ParseCalendar(url string, maxRepeats int) (Calendar, error) {
+// maxRepeats. If you pass a non-nil io.Writer the contents of the ics file
+// will also be written to that writer.
+func ParseCalendar(url string, maxRepeats int, w io.Writer) (Calendar, error) {
 	content, err := getICal(url)
 	if err != nil {
 		return Calendar{}, err
+	}
+
+	if w != nil {
+		if _, err := io.WriteString(w, content); err != nil {
+			return Calendar{}, err
+		}
 	}
 
 	return parseICalContent(content, url, maxRepeats), nil

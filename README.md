@@ -12,7 +12,7 @@ This is a work in progress. It needs a lot more tests and a small refactor on so
 import "github.com/mvader/go-ics"
 
 // ...
-calendar, err := ics.ParseCalendar("local file URL or remote URL", 0)
+calendar, err := ics.ParseCalendar("local file URL or remote URL", 0, nil)
 ```
 
 ### TODO's
