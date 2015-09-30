@@ -23,7 +23,7 @@ calendar, err := ics.ParseCalendar("local file URL or remote URL", 0, nil)
 * [ ] divide parseEvents in smaller, testable functions
 * [ ] test individual functions
 
-## LICENCE
+## LICENSE
 The MIT License (MIT)
 
 Copyright (c) 2015 Miguel Molina
