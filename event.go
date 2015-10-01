@@ -22,6 +22,20 @@ type Event struct {
 	WholeDayEvent bool
 }
 
+type events []Event
+
+func (e events) Len() int {
+	return len(e)
+}
+
+func (e events) Swap(i, j int) {
+	e[i], e[j] = e[j], e[i]
+}
+
+func (e events) Less(i, j int) bool {
+	return e[j].Start.Before(e[i].Start)
+}
+
 // NewEvent returns a new empty Event entity
 func NewEvent() *Event {
 	return &Event{

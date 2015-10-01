@@ -5,6 +5,7 @@ import (
 	"io"
 	"io/ioutil"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -244,6 +245,8 @@ func parseEvents(cal *Calendar, eventsData []string, maxRepeats int) error {
 			}
 		}
 	}
+
+	sort.Sort(events(cal.Events))
 
 	return nil
 }
