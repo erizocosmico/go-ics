@@ -33,7 +33,7 @@ func (e events) Swap(i, j int) {
 }
 
 func (e events) Less(i, j int) bool {
-	return e[j].Start.Before(e[i].Start)
+	return e[i].Start.Before(e[j].Start)
 }
 
 // NewEvent returns a new empty Event entity

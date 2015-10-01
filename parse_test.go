@@ -40,8 +40,8 @@ func TestCalendarEvents(t *testing.T) {
 	}
 
 	event := calendar.Events[0]
-	start := time.Date(2014, time.Month(7), 14, 10, 0, 0, 0, tz)
-	end := time.Date(2014, time.Month(7), 14, 11, 0, 0, 0, tz)
+	start := time.Date(2014, time.Month(6), 16, 6, 0, 0, 0, tz)
+	end := time.Date(2014, time.Month(6), 16, 7, 0, 0, 0, tz)
 	created, _ := time.Parse(icsFormat, "20140515T075711Z")
 	modified, _ := time.Parse(icsFormat, "20141125T074253Z")
 	location := "In The Office"
