@@ -17,6 +17,7 @@ calendar, err := ics.ParseCalendar("local file URL or remote URL", 0, nil)
 
 ### TODO's
 
+* [ ] Urgently rewrite the whole parser
 * [ ] Explicitly handle all errors.
 * [ ] trimField should NOT be a regex compiled on runtime.
 * [ ] func names improvement
