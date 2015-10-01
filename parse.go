@@ -19,20 +19,21 @@ var (
 	calVersionRegex  = regexp.MustCompile(`VERSION:.*?\n`)
 	calTimezoneRegex = regexp.MustCompile(`X-WR-TIMEZONE:.*?\n`)
 
-	eventSummaryRegex       = regexp.MustCompile(`SUMMARY:.*?\n`)
-	eventStatusRegex        = regexp.MustCompile(`STATUS:.*?\n`)
-	eventDescRegex          = regexp.MustCompile(`DESCRIPTION:.*?\n`)
-	eventUIDRegex           = regexp.MustCompile(`UID:.*?\n`)
-	eventClassRegex         = regexp.MustCompile(`CLASS:.*?\n`)
-	eventSequenceRegex      = regexp.MustCompile(`SEQUENCE:.*?\n`)
-	eventCreatedRegex       = regexp.MustCompile(`CREATED:.*?\n`)
-	eventModifiedRegex      = regexp.MustCompile(`LAST-MODIFIED:.*?\n`)
-	eventStartRegex         = regexp.MustCompile(`DTSTART(;TZID=.*?){0,1}:.*?\n`)
-	eventStartWholeDayRegex = regexp.MustCompile(`DTSTART;VALUE=DATE:.*?\n`)
-	eventEndRegex           = regexp.MustCompile(`DTEND(;TZID=.*?){0,1}:.*?\n`)
-	eventEndWholeDayRegex   = regexp.MustCompile(`DTEND;VALUE=DATE:.*?\n`)
-	eventRRuleRegex         = regexp.MustCompile(`RRULE:.*?\n`)
-	eventLocationRegex      = regexp.MustCompile(`LOCATION:.*?\n`)
+	eventSummaryRegex     = regexp.MustCompile(`SUMMARY:.*?\n`)
+	eventStatusRegex      = regexp.MustCompile(`STATUS:.*?\n`)
+	eventDescRegex        = regexp.MustCompile(`DESCRIPTION:.*?\n`)
+	eventUIDRegex         = regexp.MustCompile(`UID:.*?\n`)
+	eventClassRegex       = regexp.MustCompile(`CLASS:.*?\n`)
+	eventSequenceRegex    = regexp.MustCompile(`SEQUENCE:.*?\n`)
+	eventCreatedRegex     = regexp.MustCompile(`CREATED:.*?\n`)
+	eventModifiedRegex    = regexp.MustCompile(`LAST-MODIFIED:.*?\n`)
+	eventDateRegex        = regexp.MustCompile(`(DTSTART|DTEND).+\n`)
+	eventTimeRegex        = regexp.MustCompile(`(DTSTART|DTEND)(;TZID=.*?){0,1}:.*?\n`)
+	eventWholeDayRegex    = regexp.MustCompile(`(DTSTART|DTEND);VALUE=DATE:.*?\n`)
+	eventEndRegex         = regexp.MustCompile(`DTEND(;TZID=.*?){0,1}:.*?\n`)
+	eventEndWholeDayRegex = regexp.MustCompile(`DTEND;VALUE=DATE:.*?\n`)
+	eventRRuleRegex       = regexp.MustCompile(`RRULE:.*?\n`)
+	eventLocationRegex    = regexp.MustCompile(`LOCATION:.*?\n`)
 
 	attendeesRegex = regexp.MustCompile(`ATTENDEE(:|;)(.*?\r?\n)(\s.*?\r?\n)*`)
 	organizerRegex = regexp.MustCompile(`ORGANIZER(:|;)(.*?\r?\n)(\s.*?\r?\n)*`)
@@ -69,7 +70,7 @@ func ParseCalendar(url string, maxRepeats int, w io.Writer) (Calendar, error) {
 		}
 	}
 
-	return parseICalContent(content, url, maxRepeats), nil
+	return parseICalContent(content, url, maxRepeats)
 }
 
 func getICal(url string) (string, error) {
@@ -99,7 +100,7 @@ func getICal(url string) (string, error) {
 	return content, nil
 }
 
-func parseICalContent(content, url string, maxRepeats int) Calendar {
+func parseICalContent(content, url string, maxRepeats int) (Calendar, error) {
 	cal := NewCalendar()
 	eventsData, info := explodeICal(content)
 	cal.Name = parseICalName(info)
@@ -107,8 +108,12 @@ func parseICalContent(content, url string, maxRepeats int) Calendar {
 	cal.Version = parseICalVersion(info)
 	cal.Timezone = parseICalTimezone(info)
 	cal.URL = url
-	parseEvents(&cal, eventsData, maxRepeats)
-	return cal
+	err := parseEvents(&cal, eventsData, maxRepeats)
+	if err != nil {
+		return cal, err
+	}
+
+	return cal, nil
 }
 
 func explodeICal(content string) ([]string, string) {
@@ -140,12 +145,20 @@ func parseICalTimezone(content string) *time.Location {
 	return loc
 }
 
-func parseEvents(cal *Calendar, eventsData []string, maxRepeats int) {
+func parseEvents(cal *Calendar, eventsData []string, maxRepeats int) error {
 	for _, eventData := range eventsData {
 		event := NewEvent()
 
-		start := parseEventStart(eventData)
-		end := parseEventEnd(eventData)
+		start, err := parseEventDate("DTSTART", eventData)
+		if err != nil {
+			return err
+		}
+
+		end, err := parseEventDate("DTEND", eventData)
+		if err != nil {
+			return err
+		}
+
 		wholeDay := start.Hour() == 0 && end.Hour() == 0 && start.Minute() == 0 && end.Minute() == 0 && start.Second() == 0 && end.Second() == 0
 
 		event.Status = parseEventStatus(eventData)
@@ -231,6 +244,8 @@ func parseEvents(cal *Calendar, eventsData []string, maxRepeats int) {
 			}
 		}
 	}
+
+	return nil
 }
 
 func parseEventSummary(eventData string) string {
@@ -270,51 +285,52 @@ func parseEventModified(eventData string) time.Time {
 	return t
 }
 
-func parseEventStart(eventData string) time.Time {
-	var (
-		t  time.Time
-		tz string
-	)
-
-	resultWholeDay := eventStartWholeDayRegex.FindString(eventData)
-	if resultWholeDay != "" {
-		tz = trimField(resultWholeDay, "DTSTART;VALUE=DATE:")
-		t, _ = time.Parse(icsFormatWholeDay, tz)
-	} else {
-		result := eventStartRegex.FindString(eventData)
-		tz = trimField(result, "DTSTART(;TZID=.*?){0,1}:")
-
-		if !strings.Contains(tz, "Z") {
-			tz = fmt.Sprintf("%sZ", tz)
-		}
-
-		t, _ = time.Parse(icsFormat, tz)
+func parseEventDate(start, eventData string) (time.Time, error) {
+	ts := eventDateRegex.FindAllString(eventData, -1)
+	t := findWithStart(start, ts)
+	tWholeDay := eventWholeDayRegex.FindString(t)
+	if tWholeDay != "" {
+		return time.Parse(icsFormatWholeDay, strings.Split(tWholeDay, ":")[1])
 	}
 
-	return t
+	return parseDatetime(t)
 }
 
-func parseEventEnd(eventData string) time.Time {
-	var (
-		t  time.Time
-		tz string
-	)
-
-	resultWholeDay := eventEndWholeDayRegex.FindString(eventData)
-	if resultWholeDay != "" {
-		tz = trimField(resultWholeDay, "DTEND;VALUE=DATE:")
-		t, _ = time.Parse(icsFormatWholeDay, tz)
-	} else {
-		result := eventEndRegex.FindString(eventData)
-		tz = trimField(result, "DTEND(;TZID=.*?){0,1}:")
-
-		if !strings.Contains(tz, "Z") {
-			tz = fmt.Sprintf("%sZ", tz)
+func findWithStart(start string, list []string) string {
+	for _, t := range list {
+		if strings.HasPrefix(t, start) {
+			return t
 		}
-		t, _ = time.Parse(icsFormat, tz)
 	}
 
-	return t
+	return ""
+}
+
+func parseDatetime(data string) (time.Time, error) {
+	data = strings.TrimSpace(data)
+	dataParts := strings.Split(data, ":")
+	dataTz := dataParts[0]
+	timeString := dataParts[1]
+	if !strings.Contains(timeString, "Z") {
+		timeString = timeString + "Z"
+	}
+
+	t, err := time.Parse(icsFormat, timeString)
+	if err != nil {
+		return t, err
+	}
+
+	if strings.Contains(dataTz, "TZID") {
+		location := strings.Split(dataTz, "=")[1]
+		timezone, err := time.LoadLocation(location)
+		if err != nil {
+			return t, err
+		}
+
+		return time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), timezone), nil
+	}
+
+	return t, nil
 }
 
 func parseEventRRule(eventData string) string {

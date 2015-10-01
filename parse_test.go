@@ -34,9 +34,14 @@ func TestCalendarEvents(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to parse the calendar ( %s ) \n", err.Error())
 	}
+	tz, err := time.LoadLocation("Europe/Madrid")
+	if err != nil {
+		t.FailNow()
+	}
+
 	event := calendar.Events[0]
-	start, _ := time.Parse(icsFormat, "20140714T100000Z")
-	end, _ := time.Parse(icsFormat, "20140714T110000Z")
+	start := time.Date(2014, time.Month(7), 14, 10, 0, 0, 0, tz)
+	end := time.Date(2014, time.Month(7), 14, 11, 0, 0, 0, tz)
 	created, _ := time.Parse(icsFormat, "20140515T075711Z")
 	modified, _ := time.Parse(icsFormat, "20141125T074253Z")
 	location := "In The Office"
@@ -47,11 +52,11 @@ func TestCalendarEvents(t *testing.T) {
 	rrule := ""
 	attendeesCount := 3
 
-	if event.Start != start {
+	if !event.Start.Equal(start) {
 		t.Errorf("Expected start %s, found %s\n", start, event.Start)
 	}
 
-	if event.End != end {
+	if !event.End.Equal(end) {
 		t.Errorf("Expected end %s, found %s\n", end, event.End)
 	}
 
@@ -89,5 +94,33 @@ func TestCalendarEvents(t *testing.T) {
 
 	if len(event.Attendees) != attendeesCount {
 		t.Errorf("Expected attendeesCount %d, found %d\n", attendeesCount, len(event.Attendees))
+	}
+}
+
+func TestParseEventDate(t *testing.T) {
+	loc, err := time.LoadLocation("Europe/Madrid")
+	if err != nil {
+		t.FailNow()
+	}
+
+	expected := time.Date(2015, time.Month(9), 30, 15, 0, 0, 0, loc)
+	dataStart := "DTSTART;TZID=Europe/Madrid:20150930T150000\n"
+	result, err := parseEventDate("DTSTART", dataStart)
+	if err != nil {
+		t.FailNow()
+	}
+
+	if !expected.Equal(result) {
+		t.Errorf("Expected time %v to be %v", result, expected)
+	}
+
+	dataEnd := "DTEND;TZID=Europe/Madrid:20150930T150000\n"
+	result, err = parseEventDate("DTEND", dataEnd)
+	if err != nil {
+		t.FailNow()
+	}
+
+	if !expected.Equal(result) {
+		t.Errorf("Expected time %v to be %v", result, expected)
 	}
 }
