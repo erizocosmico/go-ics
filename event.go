@@ -22,17 +22,17 @@ type Event struct {
 	WholeDayEvent bool
 }
 
-type events []Event
+type Events []Event
 
-func (e events) Len() int {
+func (e Events) Len() int {
 	return len(e)
 }
 
-func (e events) Swap(i, j int) {
+func (e Events) Swap(i, j int) {
 	e[i], e[j] = e[j], e[i]
 }
 
-func (e events) Less(i, j int) bool {
+func (e Events) Less(i, j int) bool {
 	return e[i].Start.Before(e[j].Start)
 }
 

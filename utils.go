@@ -29,6 +29,11 @@ func downloadFromURL(url string) (string, error) {
 	return string(contents), nil
 }
 
+func trimFieldName(field string) string {
+	parts := strings.SplitN(field, ":", 2)
+	return strings.TrimSpace(parts[len(parts)-1])
+}
+
 func trimField(field, cutset string) string {
 	re, _ := regexp.Compile(cutset)
 	cutsetRem := re.ReplaceAllString(field, "")

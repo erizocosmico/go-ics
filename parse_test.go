@@ -5,6 +5,20 @@ import (
 	"time"
 )
 
+func TestParseCalendarName(t *testing.T) {
+	name := parseCalendarName("X-WR-CALNAME:Foo calendar\nX-WR-CALDESC: Foo Desc\n")
+	if name != "Foo calendar" {
+		t.Errorf("Expected 'Foo calendar', got '%s'", name)
+	}
+}
+
+func TestParseCalendarDesc(t *testing.T) {
+	desc := parseCalendarDesc("X-WR-CALNAME:Foo calendar\nX-WR-CALDESC: Foo Desc\n")
+	if desc != "Foo Desc" {
+		t.Errorf("Expected 'Foo Desc', got '%s'", desc)
+	}
+}
+
 func TestCalendarInfo(t *testing.T) {
 	calendar, err := ParseCalendar("testCalendars/2eventsCal.ics", 0, nil)
 	if err != nil {

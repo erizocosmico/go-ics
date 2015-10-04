@@ -60,7 +60,7 @@ var (
 // maxRepeats. If you pass a non-nil io.Writer the contents of the ics file
 // will also be written to that writer.
 func ParseCalendar(url string, maxRepeats int, w io.Writer) (Calendar, error) {
-	content, err := getICal(url)
+	content, err := getFileContents(url)
 	if err != nil {
 		return Calendar{}, err
 	}
@@ -71,10 +71,10 @@ func ParseCalendar(url string, maxRepeats int, w io.Writer) (Calendar, error) {
 		}
 	}
 
-	return parseICalContent(content, url, maxRepeats)
+	return parseContent(content, url, maxRepeats)
 }
 
-func getICal(url string) (string, error) {
+func getFileContents(url string) (string, error) {
 	var (
 		isRemote = urlRegex.FindString(url) != ""
 		content  string
@@ -101,63 +101,61 @@ func getICal(url string) (string, error) {
 	return content, nil
 }
 
-func parseICalContent(content, url string, maxRepeats int) (Calendar, error) {
-	cal := NewCalendar()
-	eventsData, info := explodeICal(content)
-	cal.Name = parseICalName(info)
-	cal.Description = parseICalDesc(info)
-	cal.Version = parseICalVersion(info)
-	cal.Timezone = parseICalTimezone(info)
-	cal.URL = url
-	err := parseEvents(&cal, eventsData, maxRepeats)
+func parseContent(content, url string, maxRepeats int) (cal Calendar, err error) {
+	cal = NewCalendar()
+	eventsData, info := explodeContents(content)
+	cal.Name = parseCalendarName(info)
+	cal.Description = parseCalendarDesc(info)
+	cal.Version, err = parseCalendarVersion(info)
 	if err != nil {
-		return cal, err
+		return
 	}
-
-	return cal, nil
+	cal.Timezone, err = parseCalendarTimezone(info)
+	if err != nil {
+		return
+	}
+	cal.URL = url
+	cal.Events, err = parseCalendarEvents(eventsData, maxRepeats)
+	return
 }
 
-func explodeICal(content string) ([]string, string) {
+func explodeContents(content string) ([]string, string) {
 	events := eventsRegex.FindAllString(content, -1)
 	info := eventsRegex.ReplaceAllString(content, "")
 	return events, info
 }
 
-func parseICalName(content string) string {
-	return trimField(calNameRegex.FindString(content), "X-WR-CALNAME:")
+func parseCalendarName(content string) string {
+	return trimFieldName(calNameRegex.FindString(content))
 }
 
-func parseICalDesc(content string) string {
-	return trimField(calDescRegex.FindString(content), "X-WR-CALDESC:")
+func parseCalendarDesc(content string) string {
+	return trimFieldName(calDescRegex.FindString(content))
 }
 
-func parseICalVersion(content string) float64 {
-	version, _ := strconv.ParseFloat(trimField(calVersionRegex.FindString(content), "VERSION:"), 64)
-	return version
+func parseCalendarVersion(content string) (float64, error) {
+	version := trimFieldName(calVersionRegex.FindString(content))
+	return strconv.ParseFloat(version, 64)
 }
 
-func parseICalTimezone(content string) *time.Location {
-	timezone := trimField(calTimezoneRegex.FindString(content), "X-WR-TIMEZONE:")
-	loc, err := time.LoadLocation(timezone)
-	if err != nil {
-		return time.Local
-	}
-
-	return loc
+func parseCalendarTimezone(content string) (*time.Location, error) {
+	tz := trimFieldName(calTimezoneRegex.FindString(content))
+	return time.LoadLocation(tz)
 }
 
-func parseEvents(cal *Calendar, eventsData []string, maxRepeats int) error {
+func parseCalendarEvents(eventsData []string, maxRepeats int) ([]Event, error) {
+	events := []Event{}
 	for _, eventData := range eventsData {
 		event := NewEvent()
 
 		start, err := parseEventDate("DTSTART", eventData)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		end, err := parseEventDate("DTEND", eventData)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		wholeDay := start.Hour() == 0 && end.Hour() == 0 && start.Minute() == 0 && end.Minute() == 0 && start.Second() == 0 && end.Second() == 0
@@ -178,7 +176,7 @@ func parseEvents(cal *Calendar, eventsData []string, maxRepeats int) error {
 		event.Attendees = parseEventAttendees(eventData)
 		event.Organizer = parseEventOrganizer(eventData)
 		duration := end.Sub(start)
-		cal.Events = append(cal.Events, *event)
+		events = append(events, *event)
 
 		if maxRepeats > 0 && event.RRule != "" {
 			until := parseUntil(event.RRule)
@@ -214,7 +212,7 @@ func parseEvents(cal *Calendar, eventsData []string, maxRepeats int) error {
 					newEvent.End = weekDays.Add(duration)
 					newEvent.Sequence = current
 					if until.IsZero() || (!until.IsZero() && (until.After(weekDays) || until.Equal(weekDays))) {
-						cal.Events = append(cal.Events, *newEvent)
+						events = append(events, *newEvent)
 					}
 				}
 
@@ -246,9 +244,9 @@ func parseEvents(cal *Calendar, eventsData []string, maxRepeats int) error {
 		}
 	}
 
-	sort.Sort(events(cal.Events))
+	sort.Sort(Events(events))
 
-	return nil
+	return events, nil
 }
 
 func parseEventSummary(eventData string) string {
