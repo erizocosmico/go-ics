@@ -31,6 +31,11 @@ func TestExcludeRecurrences(t *testing.T) {
 			RecurrenceID: d("20150830T093000Z"),
 		},
 		{
+			ID:    "4",
+			Start: d("20150830T193000Z"),
+			End:   d("20150830T203000Z"),
+		},
+		{
 			ID:           "3",
 			Start:        d("20150930T123000Z"),
 			End:          d("20150930T133000Z"),
@@ -41,13 +46,15 @@ func TestExcludeRecurrences(t *testing.T) {
 	sort.Sort(Events(eventList))
 	result := ExcludeRecurrences(eventList)
 
-	if len(result) != 3 {
+	if len(result) != 4 {
 		t.Errorf("Expected result length to be 3, not %d", len(result))
 	}
 
-	for _, r := range result {
-		if r.RecurrenceID.IsZero() {
+	for i, r := range result {
+		if (i < 2 || i == 3) && r.RecurrenceID.IsZero() {
 			t.Errorf("Expected recurrent event with id %s, %v", r.ID, r)
+		} else if i == 2 && !r.RecurrenceID.IsZero() {
+			t.Errorf("Expected non-recurrent event with id %s, %v", r.ID, r)
 		}
 	}
 }
