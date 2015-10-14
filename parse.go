@@ -20,21 +20,22 @@ var (
 	calVersionRegex  = regexp.MustCompile(`VERSION:.*?\n`)
 	calTimezoneRegex = regexp.MustCompile(`X-WR-TIMEZONE:.*?\n`)
 
-	eventSummaryRegex     = regexp.MustCompile(`SUMMARY:.*?\n`)
-	eventStatusRegex      = regexp.MustCompile(`STATUS:.*?\n`)
-	eventDescRegex        = regexp.MustCompile(`DESCRIPTION:.*?\n`)
-	eventUIDRegex         = regexp.MustCompile(`UID:.*?\n`)
-	eventClassRegex       = regexp.MustCompile(`CLASS:.*?\n`)
-	eventSequenceRegex    = regexp.MustCompile(`SEQUENCE:.*?\n`)
-	eventCreatedRegex     = regexp.MustCompile(`CREATED:.*?\n`)
-	eventModifiedRegex    = regexp.MustCompile(`LAST-MODIFIED:.*?\n`)
-	eventDateRegex        = regexp.MustCompile(`(DTSTART|DTEND).+\n`)
-	eventTimeRegex        = regexp.MustCompile(`(DTSTART|DTEND)(;TZID=.*?){0,1}:.*?\n`)
-	eventWholeDayRegex    = regexp.MustCompile(`(DTSTART|DTEND);VALUE=DATE:.*?\n`)
-	eventEndRegex         = regexp.MustCompile(`DTEND(;TZID=.*?){0,1}:.*?\n`)
-	eventEndWholeDayRegex = regexp.MustCompile(`DTEND;VALUE=DATE:.*?\n`)
-	eventRRuleRegex       = regexp.MustCompile(`RRULE:.*?\n`)
-	eventLocationRegex    = regexp.MustCompile(`LOCATION:.*?\n`)
+	eventSummaryRegex      = regexp.MustCompile(`SUMMARY:.*?\n`)
+	eventStatusRegex       = regexp.MustCompile(`STATUS:.*?\n`)
+	eventDescRegex         = regexp.MustCompile(`DESCRIPTION:.*?\n`)
+	eventUIDRegex          = regexp.MustCompile(`UID:.*?\n`)
+	eventClassRegex        = regexp.MustCompile(`CLASS:.*?\n`)
+	eventSequenceRegex     = regexp.MustCompile(`SEQUENCE:.*?\n`)
+	eventCreatedRegex      = regexp.MustCompile(`CREATED:.*?\n`)
+	eventModifiedRegex     = regexp.MustCompile(`LAST-MODIFIED:.*?\n`)
+	eventRecurrenceIDRegex = regexp.MustCompile(`RECURRENCE-ID(;TZID=.*?){0,1}:.*?\n`)
+	eventDateRegex         = regexp.MustCompile(`(DTSTART|DTEND).+\n`)
+	eventTimeRegex         = regexp.MustCompile(`(DTSTART|DTEND)(;TZID=.*?){0,1}:.*?\n`)
+	eventWholeDayRegex     = regexp.MustCompile(`(DTSTART|DTEND);VALUE=DATE:.*?\n`)
+	eventEndRegex          = regexp.MustCompile(`DTEND(;TZID=.*?){0,1}:.*?\n`)
+	eventEndWholeDayRegex  = regexp.MustCompile(`DTEND;VALUE=DATE:.*?\n`)
+	eventRRuleRegex        = regexp.MustCompile(`RRULE:.*?\n`)
+	eventLocationRegex     = regexp.MustCompile(`LOCATION:.*?\n`)
 
 	attendeesRegex = regexp.MustCompile(`ATTENDEE(:|;)(.*?\r?\n)(\s.*?\r?\n)*`)
 	organizerRegex = regexp.MustCompile(`ORGANIZER(:|;)(.*?\r?\n)(\s.*?\r?\n)*`)
@@ -169,6 +170,11 @@ func parseCalendarEvents(eventsData []string, maxRepeats int) ([]Event, error) {
 		event.Created = parseEventCreated(eventData)
 		event.Modified = parseEventModified(eventData)
 		event.RRule = parseEventRRule(eventData)
+		event.RecurrenceID, err = parseEventRecurrenceID(eventData)
+		if err != nil {
+			return nil, err
+		}
+
 		event.Location = parseEventLocation(eventData)
 		event.Start = start
 		event.End = end
@@ -245,8 +251,7 @@ func parseCalendarEvents(eventsData []string, maxRepeats int) ([]Event, error) {
 	}
 
 	sort.Sort(Events(events))
-
-	return events, nil
+	return ExcludeRecurrences(events), nil
 }
 
 func parseEventSummary(eventData string) string {
@@ -284,6 +289,15 @@ func parseEventModified(eventData string) time.Time {
 	date := trimField(eventModifiedRegex.FindString(eventData), "LAST-MODIFIED:")
 	t, _ := time.Parse(icsFormat, date)
 	return t
+}
+
+func parseEventRecurrenceID(eventData string) (time.Time, error) {
+	rec := eventRecurrenceIDRegex.FindString(eventData)
+	if rec == "" {
+		return time.Time{}, nil
+	}
+
+	return parseDatetime(rec)
 }
 
 func parseEventDate(start, eventData string) (time.Time, error) {

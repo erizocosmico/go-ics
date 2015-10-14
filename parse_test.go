@@ -138,3 +138,21 @@ func TestParseEventDate(t *testing.T) {
 		t.Errorf("Expected time %v to be %v", result, expected)
 	}
 }
+
+func TestParseEventRecurrenceID(t *testing.T) {
+	loc, err := time.LoadLocation("Europe/Madrid")
+	if err != nil {
+		t.FailNow()
+	}
+	expected := time.Date(2015, time.Month(10), 13, 15, 0, 0, 0, loc)
+	data := "RECURRENCE-ID;TZID=Europe/Madrid:20151013T150000\n"
+
+	result, err := parseEventRecurrenceID(data)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if !expected.Equal(result) {
+		t.Errorf("Expected time %v to be %v", result, expected)
+	}
+}
