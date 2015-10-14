@@ -74,6 +74,7 @@ func ExcludeRecurrences(evs []Event) []Event {
 
 		for i := 0; i < len(evs); i++ {
 			if i+1 >= len(evs) {
+				result = append(result, evs[i])
 				continue
 			}
 
