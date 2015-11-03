@@ -161,6 +161,10 @@ func parseEvents(cal *Calendar, eventsData []string, maxRepeats int) error {
 			return err
 		}
 
+		if end.IsZero() {
+			end = time.Date(start.Year(), start.Month(), start.Day(), 23, 59, 59, 0, start.Location())
+		}
+
 		wholeDay := start.Hour() == 0 && end.Hour() == 0 && start.Minute() == 0 && end.Minute() == 0 && start.Second() == 0 && end.Second() == 0
 
 		event.Status = parseEventStatus(eventData)
@@ -312,6 +316,10 @@ func parseEventDate(start, eventData string) (time.Time, error) {
 		return time.Parse(icsFormatWholeDay, strings.Split(tWholeDay, ":")[1])
 	}
 
+	if t == "" {
+		return time.Time{}, nil
+	}
+
 	return parseDatetime(t)
 }
 
@@ -327,9 +335,14 @@ func findWithStart(start string, list []string) string {
 
 func parseDatetime(data string) (time.Time, error) {
 	data = strings.TrimSpace(data)
-	dataParts := strings.Split(data, ":")
-	dataTz := dataParts[0]
-	timeString := dataParts[1]
+	var dataTz string
+	timeString := data
+	if strings.Contains(data, ":") {
+		dataParts := strings.Split(data, ":")
+		dataTz = dataParts[0]
+		timeString = dataParts[1]
+	}
+
 	if !strings.Contains(timeString, "Z") {
 		timeString = timeString + "Z"
 	}
