@@ -36,6 +36,7 @@ var (
 	eventEndWholeDayRegex  = regexp.MustCompile(`DTEND;VALUE=DATE:.*?\n`)
 	eventRRuleRegex        = regexp.MustCompile(`RRULE:.*?\n`)
 	eventLocationRegex     = regexp.MustCompile(`LOCATION:.*?\n`)
+	eventExDateRegex       = regexp.MustCompile(`EXDATE;TZID=(.*):(.*)\n`)
 
 	attendeesRegex = regexp.MustCompile(`ATTENDEE(:|;)(.*?\r?\n)(\s.*?\r?\n)*`)
 	organizerRegex = regexp.MustCompile(`ORGANIZER(:|;)(.*?\r?\n)(\s.*?\r?\n)*`)
@@ -176,6 +177,10 @@ func parseEvents(cal *Calendar, eventsData []string, maxRepeats int) error {
 		event.Created = parseEventCreated(eventData)
 		event.Modified = parseEventModified(eventData)
 		event.RRule = parseEventRRule(eventData)
+		excluded, err := parseExcludedDates(eventData)
+		if err != nil {
+			return err
+		}
 		event.RecurrenceID, err = parseEventRecurrenceID(eventData)
 		if err != nil {
 			return err
@@ -217,6 +222,12 @@ func parseEvents(cal *Calendar, eventsData []string, maxRepeats int) error {
 			for {
 				weekDays := freqDate
 				commitEvent := func() {
+					for _, e := range excluded {
+						if e.Equal(weekDays) {
+							return
+						}
+					}
+
 					current++
 					count--
 					newEvent := event.Clone()
@@ -367,6 +378,36 @@ func parseDatetime(data string) (time.Time, error) {
 
 func parseEventRRule(eventData string) string {
 	return trimField(eventRRuleRegex.FindString(eventData), "RRULE:")
+}
+
+func parseExcludedDates(eventData string) ([]time.Time, error) {
+	var dates []time.Time
+	excl := eventExDateRegex.FindAllStringSubmatch(eventData, -1)
+
+	for _, e := range excl {
+		if len(e) < 3 {
+			continue
+		}
+
+		tz, err := time.LoadLocation(e[1])
+		if err != nil {
+			return nil, err
+		}
+
+		dt := strings.TrimSpace(e[2])
+		if !strings.Contains(dt, "Z") {
+			dt += "Z"
+		}
+
+		t, err := time.Parse(icsFormat, dt)
+		if err != nil {
+			return nil, err
+		}
+
+		dates = append(dates, time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), tz))
+	}
+
+	return dates, nil
 }
 
 func parseEventLocation(eventData string) string {
