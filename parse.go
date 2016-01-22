@@ -324,7 +324,7 @@ func parseEventDate(start, eventData string) (time.Time, error) {
 	t := findWithStart(start, ts)
 	tWholeDay := eventWholeDayRegex.FindString(t)
 	if tWholeDay != "" {
-		return time.Parse(icsFormatWholeDay, strings.Split(tWholeDay, ":")[1])
+		return parseDate(strings.TrimSpace(tWholeDay))
 	}
 
 	if t == "" {
@@ -374,6 +374,10 @@ func parseDatetime(data string) (time.Time, error) {
 	}
 
 	return t, nil
+}
+
+func parseDate(data string) (time.Time, error) {
+	return parseDatetime(data + "T000000")
 }
 
 func parseEventRRule(eventData string) string {

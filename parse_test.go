@@ -142,3 +142,46 @@ func TestParseEventRecurrenceID(t *testing.T) {
 		t.Errorf("Expected time %v to be %v", result, expected)
 	}
 }
+
+var testWholeDayEvent = `
+BEGIN:VEVENT
+DTSTART;VALUE=DATE:20160122
+DTEND;VALUE=DATE:20160123
+DTSTAMP:20160122T120356Z
+UID:egrkjitavemob4vr9ce8bhh8mk@google.com
+CREATED:20160122T120327Z
+DESCRIPTION:
+LAST-MODIFIED:20160122T120327Z
+LOCATION:
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:TEST EVENT
+TRANSP:TRANSPARENT
+BEGIN:VALARM
+ACTION:EMAIL
+DESCRIPTION:This is an event reminder
+SUMMARY:Alarm notification
+END:VALARM
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:This is an event reminder
+END:VALARM
+END:VEVENT
+`
+
+func TestParseEventDateWholeDay(t *testing.T) {
+	tResult, err := parseEventDate("DTSTART", testWholeDayEvent)
+	if err != nil {
+		t.Error(err)
+	}
+
+	tExpected := time.Date(2016, time.January, 22, 0, 0, 0, 0, &time.Location{})
+	if !tResult.Equal(tExpected) {
+		t.Errorf("expected %v to be %v", tResult, tExpected)
+	}
+
+	err = parseEvents(&Calendar{}, []string{testWholeDayEvent}, 0)
+	if err != nil {
+		t.Error(err)
+	}
+}
