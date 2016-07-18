@@ -90,7 +90,7 @@ func getICal(url string) (string, error) {
 		}
 	} else {
 		if !fileExists(url) {
-			return "", fmt.Errorf("File %s does not exists", url)
+			return "", fmt.Errorf("file %s does not exists", url)
 		}
 
 		contentBytes, err := ioutil.ReadFile(url)
@@ -148,7 +148,31 @@ func parseICalTimezone(content string) *time.Location {
 	return loc
 }
 
+func eventIsDuplicated(events []Event, event *Event) (int, bool) {
+	for i, e := range events {
+		if event.Equals(&e) {
+			return i, true
+		}
+	}
+	return 0, false
+}
+
+func diff(events []Event, events2 []Event) []Event {
+	var result []Event
+OuterLoop:
+	for _, e := range events {
+		for _, e2 := range events2 {
+			if (&e).Equals(&e2) {
+				continue OuterLoop
+			}
+		}
+		result = append(result, e)
+	}
+	return result
+}
+
 func parseEvents(cal *Calendar, eventsData []string, maxRepeats int) error {
+	var excluded []Event
 	for _, eventData := range eventsData {
 		event := NewEvent()
 
@@ -177,7 +201,7 @@ func parseEvents(cal *Calendar, eventsData []string, maxRepeats int) error {
 		event.Created = parseEventCreated(eventData)
 		event.Modified = parseEventModified(eventData)
 		event.RRule = parseEventRRule(eventData)
-		excluded, err := parseExcludedDates(eventData)
+		exclusions, err := parseExcludedDates(eventData)
 		if err != nil {
 			return err
 		}
@@ -217,23 +241,25 @@ func parseEvents(cal *Calendar, eventsData []string, maxRepeats int) error {
 			}
 
 			current := 0
-			freqDate := start
+			freqDate := event.Start
 
 			for {
 				weekDays := freqDate
 				commitEvent := func() {
-					for _, e := range excluded {
-						if e.Equal(weekDays) {
-							return
-						}
-					}
-
 					current++
 					count--
 					newEvent := event.Clone()
 					newEvent.Start = weekDays
 					newEvent.End = weekDays.Add(duration)
 					newEvent.Sequence = current
+
+					for _, e := range exclusions {
+						if e.Equal(weekDays) {
+							excluded = append(excluded, *newEvent)
+							return
+						}
+					}
+
 					if until.IsZero() || (!until.IsZero() && (until.After(weekDays) || until.Equal(weekDays))) {
 						cal.Events = append(cal.Events, *newEvent)
 					}
@@ -243,13 +269,13 @@ func parseEvents(cal *Calendar, eventsData []string, maxRepeats int) error {
 					if byDay != "" {
 						for i := 0; i < 7; i++ {
 							day := parseDayNameToIcsName(weekDays.Format("Mon"))
-							if strings.Contains(byDay, day) && weekDays != start {
+							if strings.Contains(byDay, day) && weekDays != event.Start {
 								commitEvent()
 							}
 							weekDays = weekDays.AddDate(0, 0, 1)
 						}
 					} else {
-						if weekDays != start {
+						if weekDays != event.Start {
 							commitEvent()
 						}
 					}
@@ -267,8 +293,8 @@ func parseEvents(cal *Calendar, eventsData []string, maxRepeats int) error {
 		}
 	}
 
-	sort.Sort(events(cal.Events))
-	cal.Events = ExcludeRecurrences(cal.Events)
+	sort.Sort(byDate(cal.Events))
+	cal.Events = diff(ExcludeRecurrences(cal.Events), excluded)
 
 	return nil
 }
@@ -286,7 +312,7 @@ func parseEventDescription(eventData string) string {
 }
 
 func parseEventID(eventData string) string {
-	return trimField(eventUIDRegex.FindString(eventData), "UID:")
+	return trimField(eventUIDRegex.FindString(eventData), "DSTAMP:")
 }
 
 func parseEventClass(eventData string) string {

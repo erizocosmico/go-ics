@@ -29,6 +29,26 @@ func TestCalendarInfo(t *testing.T) {
 	}
 }
 
+func TestParseSplitEventExclusion(t *testing.T) {
+	calendar, err := ParseCalendar("testCalendars/repetition.ics", 1000, nil)
+	if err != nil {
+		t.Errorf("Failed to parse the calendar ( %s ) \n", err.Error())
+	}
+
+	var events []Event
+	for _, e := range calendar.Events {
+		d := time.Date(2016, time.July, 18, 0, 0, 0, 0, e.Start.Location())
+		d2 := time.Date(2016, time.July, 19, 0, 0, 0, 0, e.Start.Location())
+		if e.Start.After(d) && e.Start.Before(d2) {
+			events = append(events, e)
+		}
+	}
+
+	if len(events) != 0 {
+		t.Errorf("expected %d events in calendar, got %d\n", 0, len(events))
+	}
+}
+
 func TestCalendarEvents(t *testing.T) {
 	calendar, err := ParseCalendar("testCalendars/2eventsCal.ics", 1000, nil)
 	if err != nil {

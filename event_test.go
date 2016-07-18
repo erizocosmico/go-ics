@@ -43,7 +43,7 @@ func TestExcludeRecurrences(t *testing.T) {
 		},
 	}
 
-	sort.Sort(events(eventList))
+	sort.Sort(byDate(eventList))
 	result := ExcludeRecurrences(eventList)
 
 	if len(result) != 4 {

@@ -26,17 +26,17 @@ type Event struct {
 	WholeDayEvent bool
 }
 
-type events []Event
+type byDate []Event
 
-func (e events) Len() int {
+func (e byDate) Len() int {
 	return len(e)
 }
 
-func (e events) Swap(i, j int) {
+func (e byDate) Swap(i, j int) {
 	e[i], e[j] = e[j], e[i]
 }
 
-func (e events) Less(i, j int) bool {
+func (e byDate) Less(i, j int) bool {
 	return e[i].Start.Before(e[j].Start)
 }
 
@@ -51,6 +51,10 @@ func NewEvent() *Event {
 func (e *Event) Clone() *Event {
 	newEvent := *e
 	return &newEvent
+}
+
+func (e *Event) Equals(e2 *Event) bool {
+	return e.Start.Equal(e2.Start) && e.End.Equal(e2.End) && e.Summary == e2.Summary
 }
 
 // ExcludeRecurrences receives a list of events and removes the repetitions that
@@ -95,6 +99,6 @@ func ExcludeRecurrences(evs []Event) []Event {
 		}
 	}
 
-	sort.Sort(events(result))
+	sort.Sort(byDate(result))
 	return result
 }
