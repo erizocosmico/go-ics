@@ -73,7 +73,7 @@ func ParseCalendar(url string, maxRepeats int, w io.Writer) (Calendar, error) {
 		}
 	}
 
-	return parseICalContent(content, url, maxRepeats)
+	return ParseICalContent(content, url, maxRepeats)
 }
 
 func getICal(url string) (string, error) {
@@ -103,7 +103,7 @@ func getICal(url string) (string, error) {
 	return content, nil
 }
 
-func parseICalContent(content, url string, maxRepeats int) (Calendar, error) {
+func ParseICalContent(content, url string, maxRepeats int) (Calendar, error) {
 	cal := NewCalendar()
 	eventsData, info := explodeICal(content)
 	cal.Name = parseICalName(info)
